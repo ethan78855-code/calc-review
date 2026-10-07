@@ -21,7 +21,8 @@
   --ok:#7cc9a6; --warn:#f0a070; color-scheme:dark}
 *{box-sizing:border-box}
 /* phone: never let the page pan sideways; wide math/tables scroll inside their own box */
-html,body{overflow-x:hidden;max-width:100%}
+html,body{max-width:100%}
+html{overflow-x:hidden}
 @supports (overflow-x:clip){html,body{overflow-x:clip}}
 main,.body,.lesson-body,.sheet,summary{overflow-wrap:anywhere;min-width:0}
 .body,.lv,summary{grid-template-columns:minmax(0,1fr)}
@@ -64,7 +65,7 @@ details[open] .pid::before{content:"▾ "}
 .pill.warn{color:var(--warn);border-color:currentColor}
 .sum-zh{color:var(--muted);font-size:14px}
 .ans{display:flex;gap:10px;align-items:flex-start;background:var(--chalk-bg);border-radius:6px;padding:8px 10px;min-width:0}
-.ans-body{min-width:0;overflow-x:auto;flex:1}
+.ans-body{min-width:0;overflow-x:hidden;flex:1}
 .lbl{flex:none;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--muted);padding-top:3px}
 .ans .lbl{color:var(--ink)}
 .body{padding:2px 14px 14px;border-top:1px dashed var(--line);display:grid;gap:14px}
@@ -80,10 +81,10 @@ ul{padding-left:20px;margin:.3em 0}
 .pit{border-left:3px solid var(--warn);padding-left:12px}
 .pit h5{color:var(--warn)}
 .book{font-size:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:baseline}
-.md{display:block;overflow-x:auto;overflow-y:hidden;margin:.35em 0;max-width:100%}
+.md{display:block;overflow-x:hidden;overflow-y:hidden;margin:.35em 0;max-width:100%}
 mjx-container{max-width:100%}
-mjx-container.wide{display:inline-block;max-width:100%;overflow-x:auto;overflow-y:hidden;vertical-align:middle}
-mjx-container[display="true"]{overflow-x:auto;overflow-y:hidden;margin:.3em 0!important}
+mjx-container.wide{display:inline-block;max-width:100%;overflow-x:hidden;overflow-y:hidden;vertical-align:middle}
+mjx-container[display="true"]{overflow-x:hidden;overflow-y:hidden;margin:.3em 0!important}
 .sheet{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 18px 16px}
 .sheet h4{font-family:var(--f-display);font-size:17px;margin:22px 0 4px;color:var(--accent)}
 .sheet p{margin:.4em 0}
@@ -136,6 +137,11 @@ details.sub > summary::before{content:"▸ "}
 details.sub[open] > summary::before{content:"▾ "}
 .sub-body{padding:0 12px 10px}
 .sub-body p{margin:.3em 0}
+/* only boxes that really need it may scroll sideways (prevents wobble while scrolling down) */
+.scrollx{overflow-x:auto!important;overscroll-behavior-x:contain}
+/* back to top */
+#toTop{position:fixed;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:20;width:48px;height:48px;border-radius:50%;border:0;background:var(--board);color:var(--board-ink);font-size:13px;font-weight:700;line-height:1.1;box-shadow:0 4px 14px rgba(0,0,0,.25);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0}
+#toTop span{font-size:18px;line-height:1}
 /* vocabulary */
 .kw{border-bottom:1.5px dotted var(--accent)}
 .kw-zh{white-space:nowrap;font-family:var(--f-body);font-size:.72em;color:var(--accent);background:var(--chalk-bg);border-radius:3px;padding:0 3px;margin-left:3px;vertical-align:.12em;font-weight:500}
@@ -151,7 +157,7 @@ h3.sub{font-size:16px;margin:22px 0 10px;font-weight:700}
 .pat-zh{font-size:14px}
 .pat-do{font-size:13.5px;color:var(--muted);display:flex;gap:6px;align-items:baseline;min-width:0}
 .pat-do .lbl{color:var(--accent);padding-top:0}
-.pd,.bk{flex:1 1 0;min-width:0;overflow-x:auto;overflow-y:hidden}
+.pd,.bk{flex:1 1 0;min-width:0;overflow-x:hidden;overflow-y:hidden}
 .gsearch{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 6px}
 .gsearch label{font-size:13px;font-weight:700}
 .gsearch input{font:inherit;font-size:15px;flex:1;min-width:0;max-width:360px;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink)}
@@ -866,6 +872,15 @@ html{scroll-behavior:smooth}
   <footer>題目出自 Soo T. Tan, <i>Applied Calculus for the Managerial, Life, and Social Sciences: A Brief Approach</i>, 10th ed. 詳解為考前自修用。</footer>
 </main>
 
+<button type="button" id="toTop" aria-label="回到最上面" hidden><span>↑</span>置頂</button>
+<script>
+(function(){
+  var b=document.getElementById("toTop");
+  function upd(){ b.hidden = window.scrollY < 600; }
+  window.addEventListener("scroll", upd, {passive:true}); upd();
+  b.addEventListener("click", function(){ var r=window.matchMedia("(prefers-reduced-motion: reduce)").matches; window.scrollTo({top:0, behavior:r?"auto":"smooth"}); });
+})();
+</script>
 <script>
 (function(){
   var KEY="calc-review-level", def=1;
@@ -903,7 +918,10 @@ window.MathJax={
 function boot(){
   var done=new WeakSet();
   var q=Promise.resolve();
-  function fit(el){ el.querySelectorAll("mjx-container:not([display])").forEach(function(m){ var p=m.parentElement; if(p && m.getBoundingClientRect().width > p.getBoundingClientRect().width) m.classList.add("wide"); }); }
+  function fit(el){
+    el.querySelectorAll("mjx-container:not([display])").forEach(function(m){ var p=m.parentElement; if(p && m.getBoundingClientRect().width > p.getBoundingClientRect().width) m.classList.add("wide"); });
+    el.querySelectorAll('.md, mjx-container[display="true"], mjx-container.wide, .ans-body, .pd, .bk').forEach(function(b){ if(b.scrollWidth > b.clientWidth + 6) b.classList.add("scrollx"); else b.classList.remove("scrollx"); });
+  }
   function ts(el){ if(!el||done.has(el)) return; done.add(el); q=q.then(function(){return MathJax.typesetPromise([el]).then(function(){ fit(el); }).catch(function(){});}); }
   // summaries first (always visible), then open must-know bodies
   window.__ts=ts;
